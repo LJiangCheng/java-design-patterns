@@ -28,7 +28,7 @@ import static org.slf4j.LoggerFactory.getLogger;
 import org.slf4j.Logger;
 
 /**
- * Device class (adaptee in the pattern). We want to reuse this class. Fishing boat moves by
+ * Device class (adapter in the pattern). We want to reuse this class. Fishing boat moves by
  * sailing.
  */
 final class FishingBoat {
