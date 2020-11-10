@@ -101,9 +101,14 @@ captain.row();
 Use the Adapter pattern when
 
 * you want to use an existing class, and its interface does not match the one you need
+  * 你希望使用一个已经存在的类，但它的接口与你的需求不匹配
 * you want to create a reusable class that cooperates with unrelated or unforeseen classes, that is, classes that don't necessarily have compatible interfaces
+  * 你希望创建一个能与不相关或未知类协作的可重用的类，不相关指，不一定具有兼容接口
 * you need to use several existing subclasses, but it's impractical to adapt their interface by subclassing every one. An object adapter can adapt the interface of its parent class.
+  * 当你希望使用几个现有的子类，但一一修改每个子类的接口是不现实的。可以使用一个对象适配器来适配其父类接口
 * most of the applications using third party libraries use adapters as a middle layer between the application and the 3rd party library to decouple the application from the library. If another library has to be used only an adapter for the new library is required without having to change the application code.
+  * 大多数使用第三方库的程序使用适配器作为中间层来解耦应用程序和第三方库
+  * 如果必须使用另一个库，则只需要修改适配器而不必修改应用程序代码
 
 ## Consequences:
 Class and object adapters have different trade-offs. A class adapter

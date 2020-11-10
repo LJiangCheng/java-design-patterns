@@ -12,12 +12,13 @@ tags:
 
 Policy
 
-## Intent
+## Intent 目的
 
-Define a family of algorithms, encapsulate each one, and make them interchangeable. Strategy lets 
+定义一系列算法，封装每一个算法，并使得它们可以互换。策略模式使得算法可以独立于它的调用方而变化。
+Define a family of algorithms, encapsulate each one, and make them interchangeable. Strategy lets
 the algorithm vary independently from clients that use it.
 
-## Explanation
+## Explanation 解释
 
 Real world example
 
@@ -26,10 +27,12 @@ Real world example
 
 In plain words
 
+> 策略模式允许在运行时选择最合适的算法
 > Strategy pattern allows choosing the best suited algorithm at runtime.   
 
 Wikipedia says
 
+> 允许运行时选择算法
 > In computer programming, the strategy pattern (also known as the policy pattern) is a behavioral 
 > software design pattern that enables selecting an algorithm at runtime.
 
