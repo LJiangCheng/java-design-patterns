@@ -15,6 +15,7 @@ tags:
 
 ## Intent
 
+提供一个静态方法，目的是隐藏实现逻辑，以便客户端关注于使用而非初始化新对象
 Providing a static method encapsulated in a class called factory, in order to hide the 
 implementation logic and makes client code focus on usage rather then initialization new objects.
 
