@@ -28,6 +28,7 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Decorator that adds a club for the troll.
+ * 可以装饰任意一种实现的Troll实例并修改他们的行为
  */
 public class ClubbedTroll implements Troll {
 

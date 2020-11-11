@@ -11,11 +11,12 @@ tags:
 
 ## Also known as
 
-Wrapper
+Wrapper 装饰器/包装器模式
 
 ## Intent
 
-Attach additional responsibilities to an object dynamically. Decorators provide a flexible 
+动态地为一个对象赋予额外功能。装饰者模式为子类的功能扩展提供了一种灵活的选择方式（装饰者模式是继承的一个替代模式）。
+Attach additional responsibilities to an object dynamically. Decorators provide a flexible
 alternative to subclassing for extending functionality.
 
 ## Explanation
