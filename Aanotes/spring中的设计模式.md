@@ -1,6 +1,21 @@
 spring中的设计模式
 ------------
 
+## 适配器模式
+
+1. SpringMVC中的适配器HandlerAdapter
+   * 实现原理：
+     * HandlerAdapter根据Handler规则执行不同的Handler
+   * 实现过程：
+     * DispatcherServlet根据HandlerMapping返回的handler，向HandlerAdapter发起请求，处理Handler。
+       HandlerAdapter根据规则找到对应的Handler并让其执行，执行完毕后Handler会向HandlerAdapter返回一个ModelAndView，
+       最后由HandlerAdapter向DispatchServelet返回一个ModelAndView。
+   * 实现意义：
+     * HandlerAdatper使得Handler的扩展变得容易，只需要增加一个新的Handler和一个对应的HandlerAdapter即可。
+       因此Spring定义了一个适配接口，使得每一种Controller有一种对应的适配器实现类，让适配器代替controller执行相应的方法。
+       这样在扩展Controller时，只需要增加一个适配器类就完成了SpringMVC的扩展了。
+
+
 ## 观察者模式
 
 1. 事件机制
