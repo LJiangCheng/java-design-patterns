@@ -15,6 +15,8 @@ Virtual Constructor
 
 ## Intent
 
+定义一个接口用于创建对象，但由其子类决定具体实例化哪个类
+工厂方法让类延迟实例化到其子类
 Define an interface for creating an object, but let subclasses decide which class to instantiate. 
 Factory Method lets a class defer instantiation to subclasses.
 
@@ -22,15 +24,20 @@ Factory Method lets a class defer instantiation to subclasses.
 
 Real world example
 
+铁匠打造武器。矮人需要矮人武器，兽人需要兽人武器。根据当前的客户决定召唤哪个铁匠。
 > Blacksmith manufactures weapons. Elves require Elvish weapons and orcs require Orcish weapons. 
 > Depending on the customer at hand the right type of blacksmith is summoned.
 
 In plain words
 
+提供了一种将实例化逻辑委托给子类的方法
 > It provides a way to delegate the instantiation logic to child classes.
 
 Wikipedia says
 
+在基于类的编程中，工厂方法模式是一种创建型模式。  
+使用工厂方法来解决在不必指定确切类的情况下创建对象的问题
+这通过调用工厂方法（在接口中指定并由子类进行不同的实现，或者由基类实现并可被子类覆盖）而不是构造器来实现
 > In class-based programming, the factory method pattern is a creational pattern that uses factory 
 > methods to deal with the problem of creating objects without having to specify the exact class of 
 > the object that will be created. This is done by creating objects by calling a factory method 
