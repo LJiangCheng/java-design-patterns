@@ -3,7 +3,7 @@ spring中的设计模式
 
 ## 观察者模式
 
-### 事件机制
+1. 事件机制
    * 事件：ApplicationEvent，封装某种事件的信息
    * 事件监听：ApplicationListener，即观察者，其中只有一个方法onApplicationEvent，当监听的事件发生后该方法会被执行
    * 事件源：ApplicationContext，Spring的核心容器，事件的发布者
@@ -11,7 +11,7 @@ spring中的设计模式
 
 ## 策略模式
 
-### Resource
+1. Resource
 Resource接口是具体资源访问策略的抽象，也是所有资源访问类所实现的接口
 Resource接口本身没有提供访问任何底层资源的实现逻辑，针对不同的底层资源，Spring将会提供不同的Resource实现类，不同的实现类负责不同的资源访问逻辑。
 
@@ -26,11 +26,15 @@ Resource接口本身没有提供访问任何底层资源的实现逻辑，针对
 
 ## 工厂模式
 
-### 简单工厂/工厂方法
-
+1. 工厂方法
 BeanFactory及其一系列接口和实现类，覆盖了Bean初始化的方方面面，并提供了很多扩展点
-另外也可以自定义工厂方法用于实例化Bean，只需要在配置中指明即可
+另外也可以自定义工厂方法（指定FactoryBean）用于实例化Bean，只需要在配置中指明类和方法即可
 
+## 单例模式
+
+1. AbstractBeanFactory#getBean ==> getSingleton中进行的bean的初始化
+Spring中使用的还是双重检查锁的方式实现单例模式，因为它要初始化的并非某个特定的实例，难以使用延迟初始化占位类的方式。
+但是Spring采取了其他方式解决DCL方式的安全隐患：正式初始化之前将BeanName放入一个Set中，其他线程使用这个Set判断Bean是否在初始化的过程中
 
 
 
