@@ -15,6 +15,12 @@ spring中的设计模式
        因此Spring定义了一个适配接口，使得每一种Controller有一种对应的适配器实现类，让适配器代替controller执行相应的方法。
        这样在扩展Controller时，只需要增加一个适配器类就完成了SpringMVC的扩展了。
 
+2. AOP中的适配器模式
+   * Spring AOP 的实现是基于代理模式，但是 Spring AOP 的增强或通知(Advice)使用到了适配器模式
+   > 与之相关的接口是AdvisorAdapter。  
+   > Advice常用的类型有：BeforeAdvice（目标方法调用前，前置通知）、AfterAdvice（目标方法调用后，后置通知）、AfterReturningAdvice(目标方法执行结束后，return之前)等等。  
+   > 每个类型Advice（通知）都有对应的拦截器:MethodBeforeAdviceInterceptor、AfterReturningAdviceAdapter、AfterReturningAdviceInterceptor。  
+   > Spring预定义的通知要通过对应的适配器，适配成 MethodInterceptor接口(方法拦截器)类型的对象（如：MethodBeforeAdviceInterceptor负责适配MethodBeforeAdvice）。
 
 ## 观察者模式
 
@@ -60,7 +66,7 @@ Spring中使用的还是双重检查锁的方式实现单例模式，因为它�
 
 ## 代理模式
 
-1. AOP
+1. AOP中的代理模式
 > AOP能够将那些与业务无关，却为业务模块所共同调用的逻辑或责任（例如事务处理、日志管理、权限控制等）封装起来（抽取公共模块），
   便于减少系统的重复代码，降低模块间的耦合度，并有利于未来的可拓展性和可维护性。
 > Spring AOP 就是基于动态代理的，如果要代理的对象，实现了某个接口，那么Spring AOP会使用JDK Proxy，去创建代理对象，  
