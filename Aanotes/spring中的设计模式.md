@@ -72,6 +72,10 @@ Spring中使用的还是双重检查锁的方式实现单例模式，因为它�
 > Spring AOP 就是基于动态代理的，如果要代理的对象，实现了某个接口，那么Spring AOP会使用JDK Proxy，去创建代理对象，  
   而对于没有实现接口的对象，就无法使用 JDK Proxy 去进行代理了，这时候Spring AOP会使用Cglib ，这时候Spring AOP会使用 Cglib 生成一个被代理对象的子类来作为代理
 
+## 模板方法
+
+1. JdbcTemplate：模板方法和回调模式的结合
+
 
 
 

@@ -23,11 +23,14 @@ Real world example
 
 In plain words
 
+> 模板方法在父类中给出一般性方法的提纲，然后由具体的子类来定义实现细节
 > Template Method pattern outlines the general steps in the parent class and lets the concrete child 
 > implementations define the details. 
 
 Wikipedia says
 
+> 模板方法描述：父类（通常是一个抽象类）中的一个方法，通过一系列高级步骤定义了某一功能的结构。  
+> 这一系列步骤由定义在同一个类中的其他方法实现，这些方法就是模板方法
 > In object-oriented programming, the template method is one of the behavioral design patterns 
 > identified by Gamma et al. in the book Design Patterns. The template method is a method in a 
 > superclass, usually an abstract superclass, and defines the skeleton of an operation in terms of 
