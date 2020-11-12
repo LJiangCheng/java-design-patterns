@@ -12,6 +12,8 @@ tags:
 Proxy Pattern
 
 ## Intent
+
+这是一种对象对外表达某种特定功能的技术，但实际上这个功能的实现被委托给内部的关联对象（组合方式）
 It is a technique where an object expresses certain behavior to the outside but in 
 reality delegates responsibility for implementing that behaviour to an associated object. 
 
