@@ -74,7 +74,7 @@ Spring中使用的还是双重检查锁的方式实现单例模式，因为它�
 
 ## 模板方法
 
-1. JdbcTemplate：模板方法和回调模式的结合
+1. JdbcTemplate：模板方法和回调模式的结合  见JdbcTemplate.md及模板方法+回调.md
 
 
 
