@@ -28,6 +28,7 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.util.Queue;
+import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -36,6 +37,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
+ * 这个类在Reactor模式中作为
  * This class acts as Synchronous Event De-multiplexer and Initiation Dispatcher of Reactor pattern.
  * Multiple handles i.e. {@link AbstractNioChannel}s can be registered to the reactor and it blocks
  * for events from all these handles. Whenever an event occurs on any of the registered handles, it
@@ -57,6 +59,8 @@ public class NioReactor {
   private final Selector selector;
   private final Dispatcher dispatcher;
   /**
+   * SelectionKey和Selector操作的所有变更工作都在reactor主event loop的环境中完成
+   * 所以当任何channel需要更改其可读/可写性时，一个新的指令将会被添加到指令队列，然后等待event loop在下一次循环时取出并执行
    * All the work of altering the SelectionKey operations and Selector operations are performed in
    * the context of main event loop of reactor. So when any channel needs to change its readability
    * or writability, a new command is added in the command queue and then the event loop picks up
@@ -106,6 +110,9 @@ public class NioReactor {
   }
 
   /**
+   * 注册一个新通道到本reactor上
+   * reactor将会开始等待这个通道上的事件和事件的任何通知
+   * 注册channel的时候reactor通过AbstractNioChannel#getInterestedOps()获知通道感兴趣的操作类型
    * Registers a new channel (handle) with this reactor. Reactor will start waiting for events on
    * this channel and notify of any events. While registering the channel the reactor uses {@link
    * AbstractNioChannel#getInterestedOps()} to know about the interested operation of this channel.
@@ -116,19 +123,23 @@ public class NioReactor {
    * @throws IOException if any I/O error occurs.
    */
   public NioReactor registerChannel(AbstractNioChannel channel) throws IOException {
+    //返回一个key，表示该通道在特定的选择器中注册
     var key = channel.getJavaChannel().register(selector, channel.getInterestedOps());
+    //将一个对象附加到key(即绑定) 每次绑定会丢弃之前绑定的对象，可以传null代表丢弃当前绑定的对象。返回值：之前绑定的对象
     key.attach(channel);
+    //将反应器注入这个通道（自定义）
     channel.setReactor(this);
     return this;
   }
 
   private void eventLoop() throws IOException {
-    // honor interrupt request
+    // honor interrupt request 可中断请求
     while (!Thread.interrupted()) {
-      // honor any pending commands first
+      // honor any pending commands first 首先执行队列中新增的指令（以Runnable的形式）
       processPendingCommands();
 
       /*
+       * 同步事件多路分发发生在这里，这是一个阻塞调用，只有当任何注册到这里的通道上有非阻塞操作产生时才会返回
        * Synchronous event de-multiplexing happens here, this is blocking call which returns when it
        * is possible to initiate non-blocking operation on any of the registered channels.
        */
@@ -137,11 +148,11 @@ public class NioReactor {
       /*
        * Represents the events that have occurred on registered handles.
        */
-      var keys = selector.selectedKeys();
+      Set<SelectionKey> keys = selector.selectedKeys();
       var iterator = keys.iterator();
 
       while (iterator.hasNext()) {
-        var key = iterator.next();
+        SelectionKey key = iterator.next();
         if (!key.isValid()) {
           iterator.remove();
           continue;

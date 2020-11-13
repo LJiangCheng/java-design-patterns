@@ -55,10 +55,11 @@ import java.util.List;
  *
  * <p><i>PARTICIPANTS</i> <br>
  * <ul>
- * <li>Synchronous Event De-multiplexer
+ * <li>Synchronous Event De-multiplexer 同步事件多路复用器
  * <p>
  *     {@link NioReactor} plays the role of synchronous event de-multiplexer.
  * It waits for events on multiple channels registered to it in an event loop.
+ * 它在event loop中等待注册到它上面的多个通道的事件
  * </p>
  * </li>
  * <li>Initiation Dispatcher
@@ -81,6 +82,7 @@ import java.util.List;
  * </p>
  * </li>
  * </ul>
+ * 应用程序利用单线程侦听所有端口上的请求。它不会为每一个客户端创建一个线程，这为高负载提供了更好的扩展性。
  * The application utilizes single thread to listen for requests on all ports. It does not create a
  * separate thread for each client, which provides better scalability under load (number of clients
  * increase).
@@ -95,7 +97,7 @@ public class App {
   /**
    * Creates an instance of App which will use provided dispatcher for dispatching events on
    * reactor.
-   *
+   * 创建一个App实例，使用提供的分发器分发事件
    * @param dispatcher the dispatcher that will be used to dispatch events.
    */
   public App(Dispatcher dispatcher) {
@@ -106,6 +108,8 @@ public class App {
    * App entry.
    */
   public static void main(String[] args) throws IOException {
+    //虽然也是start方法，但App并非线程类
+    //ThreadPoolDispatcher用于分发事件
     new App(new ThreadPoolDispatcher(2)).start();
   }
 

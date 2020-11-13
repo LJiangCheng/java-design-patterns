@@ -78,6 +78,7 @@ public abstract class AbstractNioChannel {
   }
 
   /**
+   * 代表这个通道关注的操作类型，这个类型提供给selector使用
    * The operation in which the channel is interested, this operation is provided to {@link
    * Selector}.
    *
