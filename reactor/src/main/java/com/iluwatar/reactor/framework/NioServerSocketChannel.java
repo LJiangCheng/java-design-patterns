@@ -44,9 +44,11 @@ public class NioServerSocketChannel extends AbstractNioChannel {
   private final int port;
 
   /**
+   * 创建一个ServerSocketChannel，之后将其绑定到指定的端口并使用提供的handler处理这个通道中即将到来的事件
    * Creates a {@link ServerSocketChannel} which will bind at provided port and use
    * <code>handler</code> to handle incoming events on this channel.
    *
+   * 注意这个构造器没有绑定socket，需要调用#bind()方法之后绑定socket
    * <p>Note the constructor does not bind the socket, {@link #bind()} method should be called for
    * binding the socket.
    *
@@ -62,6 +64,7 @@ public class NioServerSocketChannel extends AbstractNioChannel {
 
   @Override
   public int getInterestedOps() {
+    // 作为ServerSocketChannel应该关注于接收从其他节点到来的连接
     // being a server socket channel it is interested in accepting connection from remote peers.
     return SelectionKey.OP_ACCEPT;
   }

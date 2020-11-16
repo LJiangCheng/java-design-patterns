@@ -115,13 +115,17 @@ public class App {
 
   /**
    * Starts the NIO reactor.
-   *
+   * 流程：
+   *  打开selector（一个）
+   *  打开ServerSocketChannel（一个或多个，绑定特定端口和handler）
+   *  将所有ServerSocketChannel注册到selector并表明关注的事件为连接就绪
+   *  通过线程池启动eventLoop，selector开始处理已注册的channel中到来的事件
    * @throws IOException if any channel fails to bind.
    */
   public void start() throws IOException {
     /* 创建reactor对象：
      *  设置事件分发器
-     *  打开一个选择器(selector)用于后续的通道注册和事件监听
+     *  打开一个选择器(selector)用于后续的服务端通道注册和事件监听
      * dispatcher：
      *  用于在selector接收到事件后将事件派发到指定的handler(handler可以在channel初始化的时候绑定)
      *  可以自定义对不同类型事件的处理方式
@@ -143,11 +147,12 @@ public class App {
      * log requests.
      */
     reactor
-        //创建一个channel（同时绑定port和handler）并注册到selector上
+        //打开多个ServerSocketChannel（指定port和handler）并注册到selector上
+        //注册时指明感兴趣的事件：作为ServerSocketChannel只关注连接就绪事件
         .registerChannel(tcpChannel(6666, loggingHandler))
         .registerChannel(tcpChannel(6667, loggingHandler))
         .registerChannel(udpChannel(6668, loggingHandler))
-        //启动reactor主程序，交由线程池处理，主线程到此结束
+        //启动reactor主程序，交由线程池处理，主线程到此结束，后续看eventLoop的实现
         .start();
   }
 

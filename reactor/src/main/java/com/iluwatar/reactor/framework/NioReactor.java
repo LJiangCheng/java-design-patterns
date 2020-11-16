@@ -24,6 +24,7 @@
 package com.iluwatar.reactor.framework;
 
 import java.io.IOException;
+import java.net.SocketAddress;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
@@ -127,9 +128,9 @@ public class NioReactor {
      * @throws IOException if any I/O error occurs.
      */
     public NioReactor registerChannel(AbstractNioChannel channel) throws IOException {
-        //返回一个key，表示该通道在特定的选择器中注册
+        //注册到selector并表明感兴趣的事件。返回一个key，表示该通道在特定的选择器中注册
         SelectionKey key = channel.getJavaChannel().register(selector, channel.getInterestedOps());
-        //将一个对象附加到key(用于绑定key需要的某些数据) 每次绑定会丢弃之前绑定的对象，可以传null代表丢弃当前绑定的对象。返回值：之前绑定的对象
+        //将channel绑定到key以便后续使用，每次绑定会丢弃之前绑定的对象，可以传null代表丢弃当前绑定的对象。返回值：之前绑定的对象
         key.attach(channel);
         //channel持有reactor对象（自定义）
         channel.setReactor(this);
@@ -199,8 +200,17 @@ public class NioReactor {
 
     private void onChannelReadable(SelectionKey key) {
         try {
-            // reads the incoming data in context of reactor main loop. Can this be improved?
+            /* reads the incoming data in context of reactor main loop. Can this be improved?
+             * 在主循环中读取到来的数据，可否改进？
+             *  干脆将读取的工作也一起给Handler提交到线程池处理？
+             *  更进一步，可以将连接就绪事件和其他事件隔离开来，分为主从Reactor。
+             *  主reactor线程只关注连接就绪事件，而将通过连接就绪获取到的客户端通道（SocketChannel）注册到从Reactor上，由从Reactor处理客户端通道的所有后续操作：
+             *      readable事件：读数据 -> 数据分发到Handler处理
+             *      writable事件：写数据
+             *  从Reactor可以独立使用一个线程池或者和主Reactor共用一个线程池
+             */
             Object readObject = ((AbstractNioChannel) key.attachment()).read(key);
+            //将已读取到的数据分发给业务层处理(Handler + ThreadPool)
             dispatchReadEvent(key, readObject);
         } catch (IOException e) {
             try {
@@ -218,11 +228,20 @@ public class NioReactor {
         dispatcher.onChannelReadEvent((AbstractNioChannel) key.attachment(), readObject, key);
     }
 
+    /**
+     * 客户端连接到来时触发连接（通道）可用事件
+     * 只有TCP会触发，UDP不会触发，是因为UDP不需要维持连接？
+     */
     private void onChannelAcceptable(SelectionKey key) throws IOException {
+        //拿到key关联的channel，acceptable事件中这个channel应该是ServerSocketChannel
         ServerSocketChannel serverSocketChannel = (ServerSocketChannel) key.channel();
+        //accept连接，返回一个SocketChannel
         SocketChannel socketChannel = serverSocketChannel.accept();
+        //设置为非阻塞
         socketChannel.configureBlocking(false);
+        //将SocketChannel也注册到selector上，并表明感兴趣的事件为读就绪
         SelectionKey readKey = socketChannel.register(selector, SelectionKey.OP_READ);
+        //绑定当前数据到readKey
         readKey.attach(key.attachment());
     }
 
