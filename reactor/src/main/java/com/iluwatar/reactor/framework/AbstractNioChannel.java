@@ -118,7 +118,7 @@ public abstract class AbstractNioChannel {
    * whole pending block of data at once.
    */
   void flush(SelectionKey key) throws IOException {
-    var pendingWrites = channelToPendingWrites.get(key.channel());
+    Queue<Object> pendingWrites = channelToPendingWrites.get(key.channel());
     Object pendingWrite;
     while ((pendingWrite = pendingWrites.poll()) != null) {
       // ask the concrete channel to make sense of data and write it to java channel
@@ -159,7 +159,7 @@ public abstract class AbstractNioChannel {
    * @param key  the key which is writable.
    */
   public void write(Object data, SelectionKey key) {
-    var pendingWrites = this.channelToPendingWrites.get(key.channel());
+    Queue<Object> pendingWrites = this.channelToPendingWrites.get(key.channel());
     if (pendingWrites == null) {
       synchronized (this.channelToPendingWrites) {
         pendingWrites = this.channelToPendingWrites.get(key.channel());

@@ -27,12 +27,15 @@ import java.io.IOException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
+import java.nio.channels.SocketChannel;
+import java.util.Iterator;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -54,206 +57,211 @@ import org.slf4j.LoggerFactory;
  */
 public class NioReactor {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(NioReactor.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(NioReactor.class);
 
-  private final Selector selector;
-  private final Dispatcher dispatcher;
-  /**
-   * SelectionKey和Selector操作的所有变更工作都在reactor主event loop的环境中完成
-   * 所以当任何channel需要更改其可读/可写性时，一个新的指令将会被添加到指令队列，然后等待event loop在下一次循环时取出并执行
-   * All the work of altering the SelectionKey operations and Selector operations are performed in
-   * the context of main event loop of reactor. So when any channel needs to change its readability
-   * or writability, a new command is added in the command queue and then the event loop picks up
-   * the command and executes it in next iteration.
-   */
-  private final Queue<Runnable> pendingCommands = new ConcurrentLinkedQueue<>();
-  private final ExecutorService reactorMain = Executors.newSingleThreadExecutor();
+    private final Selector selector;
+    private final Dispatcher dispatcher;
+    /**
+     * SelectionKey和Selector操作的所有变更工作都在reactor主event loop的环境中完成
+     * 所以当任何channel需要更改其可读/可写性时，一个新的指令将会被添加到指令队列，然后等待event loop在下一次循环时取出并执行
+     * All the work of altering the SelectionKey operations and Selector operations are performed in
+     * the context of main event loop of reactor. So when any channel needs to change its readability
+     * or writability, a new command is added in the command queue and then the event loop picks up
+     * the command and executes it in next iteration.
+     */
+    private final Queue<Runnable> pendingCommands = new ConcurrentLinkedQueue<>();
+    private final ExecutorService reactorMain = Executors.newSingleThreadExecutor();
 
-  /**
-   * Creates a reactor which will use provided {@code dispatcher} to dispatch events. The
-   * application can provide various implementations of dispatcher which suits its needs.
-   *
-   * @param dispatcher a non-null dispatcher used to dispatch events on registered channels.
-   * @throws IOException if any I/O error occurs.
-   */
-  public NioReactor(Dispatcher dispatcher) throws IOException {
-    this.dispatcher = dispatcher;
-    this.selector = Selector.open();
-  }
+    /**
+     * Creates a reactor which will use provided {@code dispatcher} to dispatch events. The
+     * application can provide various implementations of dispatcher which suits its needs.
+     *
+     * @param dispatcher a non-null dispatcher used to dispatch events on registered channels.
+     * @throws IOException if any I/O error occurs.
+     */
+    public NioReactor(Dispatcher dispatcher) throws IOException {
+        this.dispatcher = dispatcher;
+        this.selector = Selector.open();
+    }
 
-  /**
-   * Starts the reactor event loop in a new thread.
-   */
-  public void start() {
-    reactorMain.execute(() -> {
-      try {
-        LOGGER.info("Reactor started, waiting for events...");
-        eventLoop();
-      } catch (IOException e) {
-        LOGGER.error("exception in event loop", e);
-      }
-    });
-  }
+    /**
+     * 封装为任务提交到线程池，在一个新线程中启动reactor事件循环
+     * Starts the reactor event loop in a new thread.
+     */
+    public void start() {
+        reactorMain.execute(() -> {
+            try {
+                LOGGER.info("Reactor started, waiting for events...");
+                eventLoop();
+            } catch (IOException e) {
+                LOGGER.error("exception in event loop", e);
+            }
+        });
+    }
 
-  /**
-   * Stops the reactor and related resources such as dispatcher.
-   *
-   * @throws InterruptedException if interrupted while stopping the reactor.
-   * @throws IOException          if any I/O error occurs.
-   */
-  public void stop() throws InterruptedException, IOException {
-    reactorMain.shutdownNow();
-    selector.wakeup();
-    reactorMain.awaitTermination(4, TimeUnit.SECONDS);
-    selector.close();
-    LOGGER.info("Reactor stopped");
-  }
+    /**
+     * Stops the reactor and related resources such as dispatcher.
+     *
+     * @throws InterruptedException if interrupted while stopping the reactor.
+     * @throws IOException          if any I/O error occurs.
+     */
+    public void stop() throws InterruptedException, IOException {
+        reactorMain.shutdownNow();
+        selector.wakeup();
+        reactorMain.awaitTermination(4, TimeUnit.SECONDS);
+        selector.close();
+        LOGGER.info("Reactor stopped");
+    }
 
-  /**
-   * 注册一个新通道到本reactor上
-   * reactor将会开始等待这个通道上的事件和事件的任何通知
-   * 注册channel的时候reactor通过AbstractNioChannel#getInterestedOps()获知通道感兴趣的操作类型
-   * Registers a new channel (handle) with this reactor. Reactor will start waiting for events on
-   * this channel and notify of any events. While registering the channel the reactor uses {@link
-   * AbstractNioChannel#getInterestedOps()} to know about the interested operation of this channel.
-   *
-   * @param channel a new channel on which reactor will wait for events. The channel must be bound
-   *                prior to being registered.
-   * @return this
-   * @throws IOException if any I/O error occurs.
-   */
-  public NioReactor registerChannel(AbstractNioChannel channel) throws IOException {
-    //返回一个key，表示该通道在特定的选择器中注册
-    var key = channel.getJavaChannel().register(selector, channel.getInterestedOps());
-    //将一个对象附加到key(即绑定) 每次绑定会丢弃之前绑定的对象，可以传null代表丢弃当前绑定的对象。返回值：之前绑定的对象
-    key.attach(channel);
-    //将反应器注入这个通道（自定义）
-    channel.setReactor(this);
-    return this;
-  }
+    /**
+     * 注册一个新通道到本reactor上
+     * reactor将会开始等待这个通道上的事件和事件的任何通知
+     * 注册channel的时候reactor通过AbstractNioChannel#getInterestedOps()获知通道感兴趣的操作类型
+     * Registers a new channel (handle) with this reactor. Reactor will start waiting for events on
+     * this channel and notify of any events. While registering the channel the reactor uses {@link
+     * AbstractNioChannel#getInterestedOps()} to know about the interested operation of this channel.
+     *
+     * @param channel a new channel on which reactor will wait for events. The channel must be bound
+     *                prior to being registered.
+     * @return this
+     * @throws IOException if any I/O error occurs.
+     */
+    public NioReactor registerChannel(AbstractNioChannel channel) throws IOException {
+        //返回一个key，表示该通道在特定的选择器中注册
+        SelectionKey key = channel.getJavaChannel().register(selector, channel.getInterestedOps());
+        //将一个对象附加到key(用于绑定key需要的某些数据) 每次绑定会丢弃之前绑定的对象，可以传null代表丢弃当前绑定的对象。返回值：之前绑定的对象
+        key.attach(channel);
+        //channel持有reactor对象（自定义）
+        channel.setReactor(this);
+        return this;
+    }
 
-  private void eventLoop() throws IOException {
-    // honor interrupt request 可中断请求
-    while (!Thread.interrupted()) {
-      // honor any pending commands first 首先执行队列中新增的指令（以Runnable的形式）
-      processPendingCommands();
+    /**
+     * 正式：启动reactor事件循环
+     */
+    private void eventLoop() throws IOException {
+        // honor interrupt request 响应中断
+        while (!Thread.interrupted()) {
+            // honor any pending commands first 首先执行预操作集中新增的指令（封装为Runnable）
+            processPendingCommands();
+            /*
+             * 同步事件多路复用发生在这里，这是一个阻塞调用，只有当任何注册到这里的通道上有非阻塞操作产生时才会返回
+             * Synchronous event de-multiplexing happens here, this is blocking call which returns when it
+             * is possible to initiate non-blocking operation on any of the registered channels.
+             */
+            selector.select();
 
-      /*
-       * 同步事件多路分发发生在这里，这是一个阻塞调用，只有当任何注册到这里的通道上有非阻塞操作产生时才会返回
-       * Synchronous event de-multiplexing happens here, this is blocking call which returns when it
-       * is possible to initiate non-blocking operation on any of the registered channels.
-       */
-      selector.select();
-
-      /*
-       * Represents the events that have occurred on registered handles.
-       */
-      Set<SelectionKey> keys = selector.selectedKeys();
-      var iterator = keys.iterator();
-
-      while (iterator.hasNext()) {
-        SelectionKey key = iterator.next();
-        if (!key.isValid()) {
-          iterator.remove();
-          continue;
+            /* 代表发生在已注册的处理器上的事件集合
+             * Represents the events that have occurred on registered handles.
+             */
+            Set<SelectionKey> keys = selector.selectedKeys();
+            Iterator<SelectionKey> iterator = keys.iterator();
+            //遍历并处理就绪的事件
+            while (iterator.hasNext()) {
+                SelectionKey key = iterator.next();
+                if (!key.isValid()) {
+                    iterator.remove();
+                    continue;
+                }
+                processKey(key);
+            }
+            keys.clear();
         }
-        processKey(key);
-      }
-      keys.clear();
-    }
-  }
-
-  private void processPendingCommands() {
-    var iterator = pendingCommands.iterator();
-    while (iterator.hasNext()) {
-      var command = iterator.next();
-      command.run();
-      iterator.remove();
-    }
-  }
-
-  /*
-   * Initiation dispatcher logic, it checks the type of event and notifier application specific
-   * event handler to handle the event.
-   */
-  private void processKey(SelectionKey key) throws IOException {
-    if (key.isAcceptable()) {
-      onChannelAcceptable(key);
-    } else if (key.isReadable()) {
-      onChannelReadable(key);
-    } else if (key.isWritable()) {
-      onChannelWritable(key);
-    }
-  }
-
-  private static void onChannelWritable(SelectionKey key) throws IOException {
-    var channel = (AbstractNioChannel) key.attachment();
-    channel.flush(key);
-  }
-
-  private void onChannelReadable(SelectionKey key) {
-    try {
-      // reads the incoming data in context of reactor main loop. Can this be improved?
-      var readObject = ((AbstractNioChannel) key.attachment()).read(key);
-      dispatchReadEvent(key, readObject);
-    } catch (IOException e) {
-      try {
-        key.channel().close();
-      } catch (IOException e1) {
-        LOGGER.error("error closing channel", e1);
-      }
-    }
-  }
-
-  /*
-   * Uses the application provided dispatcher to dispatch events to application handler.
-   */
-  private void dispatchReadEvent(SelectionKey key, Object readObject) {
-    dispatcher.onChannelReadEvent((AbstractNioChannel) key.attachment(), readObject, key);
-  }
-
-  private void onChannelAcceptable(SelectionKey key) throws IOException {
-    var serverSocketChannel = (ServerSocketChannel) key.channel();
-    var socketChannel = serverSocketChannel.accept();
-    socketChannel.configureBlocking(false);
-    var readKey = socketChannel.register(selector, SelectionKey.OP_READ);
-    readKey.attach(key.attachment());
-  }
-
-  /**
-   * Queues the change of operations request of a channel, which will change the interested
-   * operations of the channel sometime in future.
-   *
-   * <p>This is a non-blocking method and does not guarantee that the operations have changed when
-   * this method returns.
-   *
-   * @param key           the key for which operations have to be changed.
-   * @param interestedOps the new interest operations.
-   */
-  public void changeOps(SelectionKey key, int interestedOps) {
-    pendingCommands.add(new ChangeKeyOpsCommand(key, interestedOps));
-    selector.wakeup();
-  }
-
-  /**
-   * A command that changes the interested operations of the key provided.
-   */
-  class ChangeKeyOpsCommand implements Runnable {
-    private final SelectionKey key;
-    private final int interestedOps;
-
-    public ChangeKeyOpsCommand(SelectionKey key, int interestedOps) {
-      this.key = key;
-      this.interestedOps = interestedOps;
     }
 
-    public void run() {
-      key.interestOps(interestedOps);
+    private void processPendingCommands() {
+        Iterator<Runnable> iterator = pendingCommands.iterator();
+        while (iterator.hasNext()) {
+            Runnable command = iterator.next();
+            command.run();
+            iterator.remove();
+        }
     }
 
-    @Override
-    public String toString() {
-      return "Change of ops to: " + interestedOps;
+    /*
+     * Initiation dispatcher logic, it checks the type of event and notifier application specific
+     * event handler to handle the event.
+     */
+    private void processKey(SelectionKey key) throws IOException {
+        if (key.isAcceptable()) {
+            onChannelAcceptable(key);
+        } else if (key.isReadable()) {
+            onChannelReadable(key);
+        } else if (key.isWritable()) {
+            onChannelWritable(key);
+        }
     }
-  }
+
+    private static void onChannelWritable(SelectionKey key) throws IOException {
+        AbstractNioChannel channel = (AbstractNioChannel) key.attachment();
+        channel.flush(key);
+    }
+
+    private void onChannelReadable(SelectionKey key) {
+        try {
+            // reads the incoming data in context of reactor main loop. Can this be improved?
+            Object readObject = ((AbstractNioChannel) key.attachment()).read(key);
+            dispatchReadEvent(key, readObject);
+        } catch (IOException e) {
+            try {
+                key.channel().close();
+            } catch (IOException e1) {
+                LOGGER.error("error closing channel", e1);
+            }
+        }
+    }
+
+    /* 使用程序提供的分发器分发事件到处理器上
+     * Uses the application provided dispatcher to dispatch events to application handler.
+     */
+    private void dispatchReadEvent(SelectionKey key, Object readObject) {
+        dispatcher.onChannelReadEvent((AbstractNioChannel) key.attachment(), readObject, key);
+    }
+
+    private void onChannelAcceptable(SelectionKey key) throws IOException {
+        ServerSocketChannel serverSocketChannel = (ServerSocketChannel) key.channel();
+        SocketChannel socketChannel = serverSocketChannel.accept();
+        socketChannel.configureBlocking(false);
+        SelectionKey readKey = socketChannel.register(selector, SelectionKey.OP_READ);
+        readKey.attach(key.attachment());
+    }
+
+    /**
+     * Queues the change of operations request of a channel, which will change the interested
+     * operations of the channel sometime in future.
+     *
+     * <p>This is a non-blocking method and does not guarantee that the operations have changed when
+     * this method returns.
+     *
+     * @param key           the key for which operations have to be changed.
+     * @param interestedOps the new interest operations.
+     */
+    public void changeOps(SelectionKey key, int interestedOps) {
+        //添加预操作
+        pendingCommands.add(new ChangeKeyOpsCommand(key, interestedOps));
+        //唤醒selector以执行预操作
+        selector.wakeup();
+    }
+
+    /**
+     * A command that changes the interested operations of the key provided.
+     */
+    class ChangeKeyOpsCommand implements Runnable {
+        private final SelectionKey key;
+        private final int interestedOps;
+
+        public ChangeKeyOpsCommand(SelectionKey key, int interestedOps) {
+            this.key = key;
+            this.interestedOps = interestedOps;
+        }
+
+        public void run() {
+            key.interestOps(interestedOps);
+        }
+
+        @Override
+        public String toString() {
+            return "Change of ops to: " + interestedOps;
+        }
+    }
 }

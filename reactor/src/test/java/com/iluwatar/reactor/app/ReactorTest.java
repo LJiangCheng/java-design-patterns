@@ -50,12 +50,12 @@ public class ReactorTest {
   @Test
   public void testAppUsingThreadPoolDispatcher() throws IOException, InterruptedException {
     LOGGER.info("testAppUsingThreadPoolDispatcher start");
-    var app = new App(new ThreadPoolDispatcher(2));
+    App app = new App(new ThreadPoolDispatcher(2));
     app.start();
 
     assertNotNull(app);
 
-    var client = new AppClient();
+    AppClient client = new AppClient();
     client.start();
 
     assertNotNull(client);
@@ -82,12 +82,12 @@ public class ReactorTest {
   @Test
   public void testAppUsingSameThreadDispatcher() throws IOException, InterruptedException {
     LOGGER.info("testAppUsingSameThreadDispatcher start");
-    var app = new App(new SameThreadDispatcher());
+    App app = new App(new SameThreadDispatcher());
     app.start();
 
     assertNotNull(app);
 
-    var client = new AppClient();
+    AppClient client = new AppClient();
     client.start();
 
     assertNotNull(client);

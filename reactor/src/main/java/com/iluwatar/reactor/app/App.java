@@ -31,6 +31,7 @@ import com.iluwatar.reactor.framework.NioReactor;
 import com.iluwatar.reactor.framework.NioServerSocketChannel;
 import com.iluwatar.reactor.framework.ThreadPoolDispatcher;
 import java.io.IOException;
+import java.nio.channels.Channel;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -108,8 +109,7 @@ public class App {
    * App entry.
    */
   public static void main(String[] args) throws IOException {
-    //虽然也是start方法，但App并非线程类
-    //ThreadPoolDispatcher用于分发事件
+    //创建自定义ThreadPoolDispatcher用于分发事件
     new App(new ThreadPoolDispatcher(2)).start();
   }
 
@@ -119,25 +119,35 @@ public class App {
    * @throws IOException if any channel fails to bind.
    */
   public void start() throws IOException {
-    /*
+    /* 创建reactor对象：
+     *  设置事件分发器
+     *  打开一个选择器(selector)用于后续的通道注册和事件监听
+     * dispatcher：
+     *  用于在selector接收到事件后将事件派发到指定的handler(handler可以在channel初始化的时候绑定)
+     *  可以自定义对不同类型事件的处理方式
+     *
+     * 应用程序可以自定义事件分发机制
      * The application can customize its event dispatching mechanism.
      */
     reactor = new NioReactor(dispatcher);
 
-    /*
+    /* 代表分发器在对应的事件发生时可调用的应用程序特定业务逻辑。
+     * 在这个例子里，这个事件是读事件
      * This represents application specific business logic that dispatcher will call on appropriate
      * events. These events are read events in our example.
      */
-    var loggingHandler = new LoggingHandler();
+    LoggingHandler loggingHandler = new LoggingHandler();
 
-    /*
+    /* 将应用程序绑定到多个通道上，使用同一个日志处理器处理到来的日志请求
      * Our application binds to multiple channels and uses same logging handler to handle incoming
      * log requests.
      */
     reactor
+        //创建一个channel（同时绑定port和handler）并注册到selector上
         .registerChannel(tcpChannel(6666, loggingHandler))
         .registerChannel(tcpChannel(6667, loggingHandler))
         .registerChannel(udpChannel(6668, loggingHandler))
+        //启动reactor主程序，交由线程池处理，主线程到此结束
         .start();
   }
 
@@ -150,20 +160,20 @@ public class App {
   public void stop() throws InterruptedException, IOException {
     reactor.stop();
     dispatcher.stop();
-    for (var channel : channels) {
+    for (AbstractNioChannel channel : channels) {
       channel.getJavaChannel().close();
     }
   }
 
   private AbstractNioChannel tcpChannel(int port, ChannelHandler handler) throws IOException {
-    var channel = new NioServerSocketChannel(port, handler);
+    NioServerSocketChannel channel = new NioServerSocketChannel(port, handler);
     channel.bind();
     channels.add(channel);
     return channel;
   }
 
   private AbstractNioChannel udpChannel(int port, ChannelHandler handler) throws IOException {
-    var channel = new NioDatagramChannel(port, handler);
+    NioDatagramChannel channel = new NioDatagramChannel(port, handler);
     channel.bind();
     channels.add(channel);
     return channel;

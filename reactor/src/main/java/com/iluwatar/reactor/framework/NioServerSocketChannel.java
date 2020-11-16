@@ -83,9 +83,9 @@ public class NioServerSocketChannel extends AbstractNioChannel {
    */
   @Override
   public ByteBuffer read(SelectionKey key) throws IOException {
-    var socketChannel = (SocketChannel) key.channel();
-    var buffer = ByteBuffer.allocate(1024);
-    var read = socketChannel.read(buffer);
+    SocketChannel socketChannel = (SocketChannel) key.channel();
+    ByteBuffer buffer = ByteBuffer.allocate(1024);
+    int read = socketChannel.read(buffer);
     buffer.flip();
     if (read == -1) {
       throw new IOException("Socket closed");
@@ -100,7 +100,7 @@ public class NioServerSocketChannel extends AbstractNioChannel {
    */
   @Override
   public void bind() throws IOException {
-    var javaChannel = getJavaChannel();
+    ServerSocketChannel javaChannel = getJavaChannel();
     javaChannel.socket().bind(new InetSocketAddress(InetAddress.getLocalHost(), port));
     javaChannel.configureBlocking(false);
     LOGGER.info("Bound TCP socket at port: {}", port);
@@ -112,7 +112,7 @@ public class NioServerSocketChannel extends AbstractNioChannel {
    */
   @Override
   protected void doWrite(Object pendingWrite, SelectionKey key) throws IOException {
-    var pendingBuffer = (ByteBuffer) pendingWrite;
+    ByteBuffer pendingBuffer = (ByteBuffer) pendingWrite;
     ((SocketChannel) key.channel()).write(pendingBuffer);
   }
 }

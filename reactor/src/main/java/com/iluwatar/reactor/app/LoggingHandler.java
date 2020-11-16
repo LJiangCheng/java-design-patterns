@@ -54,7 +54,7 @@ public class LoggingHandler implements ChannelHandler {
       doLogging((ByteBuffer) readObject);
       sendReply(channel, key);
     } else if (readObject instanceof DatagramPacket) {
-      var datagram = (DatagramPacket) readObject;
+      DatagramPacket datagram = (DatagramPacket) readObject;
       doLogging(datagram.getData());
       sendReply(channel, datagram, key);
     } else {
@@ -62,23 +62,19 @@ public class LoggingHandler implements ChannelHandler {
     }
   }
 
-  private static void sendReply(
-      AbstractNioChannel channel,
-      DatagramPacket incomingPacket,
-      SelectionKey key
-  ) {
+  private static void sendReply(AbstractNioChannel channel, DatagramPacket incomingPacket, SelectionKey key) {
     /*
      * Create a reply acknowledgement datagram packet setting the receiver to the sender of incoming
      * message.
      */
-    var replyPacket = new DatagramPacket(ByteBuffer.wrap(ACK));
+    DatagramPacket replyPacket = new DatagramPacket(ByteBuffer.wrap(ACK));
     replyPacket.setReceiver(incomingPacket.getSender());
 
     channel.write(replyPacket, key);
   }
 
   private static void sendReply(AbstractNioChannel channel, SelectionKey key) {
-    var buffer = ByteBuffer.wrap(ACK);
+    ByteBuffer buffer = ByteBuffer.wrap(ACK);
     channel.write(buffer, key);
   }
 

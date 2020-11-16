@@ -25,6 +25,7 @@ package com.iluwatar.reactor.app;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -54,7 +55,7 @@ public class AppClient {
    * @throws IOException if any I/O error occurs.
    */
   public static void main(String[] args) throws IOException {
-    var appClient = new AppClient();
+    AppClient appClient = new AppClient();
     appClient.start();
   }
 
@@ -117,8 +118,8 @@ public class AppClient {
     @Override
     public void run() {
       try (Socket socket = new Socket(InetAddress.getLocalHost(), serverPort)) {
-        var outputStream = socket.getOutputStream();
-        var writer = new PrintWriter(outputStream);
+        OutputStream outputStream = socket.getOutputStream();
+        PrintWriter writer = new PrintWriter(outputStream);
         sendLogRequests(writer, socket.getInputStream());
       } catch (IOException e) {
         LOGGER.error("error sending requests", e);
@@ -127,12 +128,12 @@ public class AppClient {
     }
 
     private void sendLogRequests(PrintWriter writer, InputStream inputStream) throws IOException {
-      for (var i = 0; i < 4; i++) {
+      for (int i = 0; i < 4; i++) {
         writer.println(clientName + " - Log request: " + i);
         writer.flush();
 
-        var data = new byte[1024];
-        var read = inputStream.read(data, 0, data.length);
+        byte[] data = new byte[1024];
+        int read = inputStream.read(data, 0, data.length);
         if (read == 0) {
           LOGGER.info("Read zero bytes");
         } else {
@@ -166,17 +167,17 @@ public class AppClient {
 
     @Override
     public void run() {
-      try (var socket = new DatagramSocket()) {
-        for (var i = 0; i < 4; i++) {
+      try (DatagramSocket socket = new DatagramSocket()) {
+        for (int i = 0; i < 4; i++) {
 
-          var message = clientName + " - Log request: " + i;
-          var bytes = message.getBytes();
-          var request = new DatagramPacket(bytes, bytes.length, remoteAddress);
+          String message = clientName + " - Log request: " + i;
+          byte[] bytes = message.getBytes();
+          DatagramPacket request = new DatagramPacket(bytes, bytes.length, remoteAddress);
 
           socket.send(request);
 
-          var data = new byte[1024];
-          var reply = new DatagramPacket(data, data.length);
+          byte[] data = new byte[1024];
+          DatagramPacket reply = new DatagramPacket(data, data.length);
           socket.receive(reply);
           if (reply.getLength() == 0) {
             LOGGER.info("Read zero bytes");
