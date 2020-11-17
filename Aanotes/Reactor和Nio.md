@@ -60,7 +60,7 @@ Reactor With NIO
 ## Reactor
 
 1. 概念和结构
-   > 事件驱动的，有一个或多个并发输入源，有一个ServiceHandler，有多个RequestHandler。这个ServiceHandler会同步的将输入的请求多路复用地
+   > 事件驱动的，有一个或多个并发输入源，有一个ServiceHandler，有多个RequestHandler。这个ServiceHandler会同步的将输入的请求多路复用地  
      分发给RequestHandler。如图：
      ![Reactor_Simple.png](files/Reactor_Simple.png)
    > 结构上看这有点类似生产者消费者模式，即有一个或多个生产者将事件放入一个Queue中，而一个或多个消费者主动的从这个Queue中Poll事件来处理；  
@@ -72,14 +72,20 @@ Reactor With NIO
    > > PS:这个Doug Lea在Scalable IO In Java中有非常深入的解释，同时这篇文章里也描述了主从分离的Reactor模式，这同样是Netty使用的实现形式
 
 3. 主从分离
+   > 问题：单一的Reactor线程不仅负责接收就绪请求，同时还负责从channel读写数据，而读写数据还是需要一定的消耗的，一定程度上回影响吞吐量  
+   > 解决方案：主从分离，主reactor只负责接收请求，接收进来后将新的SocketChannel注册到副reactor上，由副reactor进行后续的读写操作和业务分发到Handler
 
 4. 优缺点
    * 优点
      > 解耦、提升复用性、模块化、可移植性、事件驱动、细力度的并发控制等
    * 缺点
-     > 相比传统的简单模型，Reactor增加了一定的复杂性，因而有一定的门槛，并且不易于调试。
-     > Reactor模式需要底层的Synchronous Event Demultiplexer支持，比如Java中的Selector支持，操作系统的select系统调用支持，如果要自己实现Synchronous Event Demultiplexer可能不会有那么高效。
-     > Reactor模式在IO读写数据时还是在同一个线程中实现的，即使使用多个Reactor机制的情况下，那些共享一个Reactor的Channel如果出现一个长时间的数据读写，会影响这个Reactor中其他Channel的相应时间，比如在大文件传输时，IO操作就会影响其他Client的相应时间，因而对这种操作，使用传统的Thread-Per-Connection或许是一个更好的选择，或则此时使用Proactor模式。
+     > 相比传统的简单模型，Reactor增加了一定的复杂性，因而有一定的门槛，并且不易于调试  
+     > Reactor模式需要底层的Synchronous Event Demultiplexer支持，比如Java中的Selector支持，操作系统的select系统调用支持，  
+       如果要自己实现Synchronous Event Demultiplexer可能不会有那么高效。 --所以在直接借用Selector的情况下这一点也不重要  
+     > Reactor模式在IO读写数据时还是在同一个线程中实现的，即使使用多个Reactor机制（即主从分离）的情况下，那些共享一个Reactor的Channel如果出现  
+       一个长时间的数据读写，还是会影响这个Reactor中其他Channel的相应时间，比如在大文件传输时，IO操作就会影响其他Client的相应时间，因而  
+       对这种操作，使用传统的Thread-Per-Connection或许是一个更好的选择，或者此时使用Proactor模式。
+
 
 ## Netty
 
