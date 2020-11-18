@@ -24,7 +24,6 @@
 package com.iluwatar.reactor.framework;
 
 import java.io.IOException;
-import java.net.SocketAddress;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
@@ -36,6 +35,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -59,9 +59,14 @@ import org.slf4j.LoggerFactory;
 public class NioReactor {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(NioReactor.class);
+    private static final AtomicInteger NEXT_INDEX = new AtomicInteger(0);
+    private static final int SUB_REACTOR_NUM = 3;
 
-    private final Selector selector;
-    private final Dispatcher dispatcher;
+    private final boolean isMainReactor;
+    private Dispatcher dispatcher;
+    public final Selector selector;
+    public final NioReactor[] subReactors = new NioReactor[SUB_REACTOR_NUM];
+
     /**
      * SelectionKey和Selector操作的所有变更工作都在reactor主event loop的环境中完成
      * 所以当任何channel需要更改其可读/可写性时，一个新的指令将会被添加到指令队列，然后等待event loop在下一次循环时取出并执行
@@ -71,7 +76,8 @@ public class NioReactor {
      * the command and executes it in next iteration.
      */
     private final Queue<Runnable> pendingCommands = new ConcurrentLinkedQueue<>();
-    private final ExecutorService reactorMain = Executors.newSingleThreadExecutor();
+    private final ExecutorService mainService = Executors.newSingleThreadExecutor();
+    private ExecutorService subService;
 
     /**
      * Creates a reactor which will use provided {@code dispatcher} to dispatch events. The
@@ -80,9 +86,19 @@ public class NioReactor {
      * @param dispatcher a non-null dispatcher used to dispatch events on registered channels.
      * @throws IOException if any I/O error occurs.
      */
-    public NioReactor(Dispatcher dispatcher) throws IOException {
-        this.dispatcher = dispatcher;
+    public NioReactor(Dispatcher dispatcher, boolean isMainReactor) throws IOException {
+        //开启selector mainReactor/subReactor都一样要开启
         this.selector = Selector.open();
+        this.isMainReactor = isMainReactor;
+        //如果是sub：设置任务分发器（由App传入，本例具体为线程池实现）
+        this.dispatcher = dispatcher;
+        if (isMainReactor) {
+            //如果是main：初始化对应的subReactor并初始化连接池
+            for (int i = 0; i < subReactors.length; i++) {
+                subReactors[i] = new NioReactor(dispatcher, false);
+            }
+            subService = Executors.newFixedThreadPool(3);
+        }
     }
 
     /**
@@ -90,7 +106,11 @@ public class NioReactor {
      * Starts the reactor event loop in a new thread.
      */
     public void start() {
-        reactorMain.execute(() -> {
+        if (!isMainReactor) {
+            //不允许非mainReactor调用start方法
+            throw new RuntimeException("Not main reactor is not allow to start!");
+        }
+        mainService.execute(() -> {
             try {
                 LOGGER.info("Reactor started, waiting for events...");
                 eventLoop();
@@ -98,6 +118,16 @@ public class NioReactor {
                 LOGGER.error("exception in event loop", e);
             }
         });
+        for (NioReactor subReactor : subReactors) {
+            subService.execute(() -> {
+                try {
+                    LOGGER.info("subReactor started, waiting for events...");
+                    subReactor.eventLoop();
+                } catch (IOException e) {
+                    LOGGER.error("exception in subReactor event loop", e);
+                }
+            });
+        }
     }
 
     /**
@@ -107,11 +137,25 @@ public class NioReactor {
      * @throws IOException          if any I/O error occurs.
      */
     public void stop() throws InterruptedException, IOException {
-        reactorMain.shutdownNow();
+        if (!isMainReactor) {
+            //不允许非主reactor调用stop方法
+            throw new RuntimeException("Not main reactor is not allow to stop!");
+        }
+        mainService.shutdownNow();
         selector.wakeup();
-        reactorMain.awaitTermination(4, TimeUnit.SECONDS);
+        mainService.awaitTermination(1, TimeUnit.SECONDS);
         selector.close();
-        LOGGER.info("Reactor stopped");
+        LOGGER.info("MainReactor stopped");
+        //关闭子线程池和reactors
+        subService.shutdown();
+        for (NioReactor subReactor : subReactors) {
+            subReactor.selector.wakeup();
+        }
+        subService.awaitTermination(4, TimeUnit.SECONDS);
+        for (NioReactor subReactor : subReactors) {
+            subReactor.selector.close();
+        }
+        LOGGER.info("SubReactor stopped!");
     }
 
     /**
@@ -140,7 +184,7 @@ public class NioReactor {
     /**
      * 正式：启动reactor事件循环
      */
-    private void eventLoop() throws IOException {
+    public void eventLoop() throws IOException {
         // honor interrupt request 响应中断
         while (!Thread.interrupted()) {
             // honor any pending commands first 首先执行预操作集中新增的指令（封装为Runnable）
@@ -149,24 +193,25 @@ public class NioReactor {
              * 同步事件多路复用发生在这里，这是一个阻塞调用，只有当任何注册到这里的通道上有非阻塞操作产生时才会返回
              * Synchronous event de-multiplexing happens here, this is blocking call which returns when it
              * is possible to initiate non-blocking operation on any of the registered channels.
+             * 使用带timeout的形式可以防止通道注册时死锁
              */
-            selector.select();
-
-            /* 代表发生在已注册的处理器上的事件集合
-             * Represents the events that have occurred on registered handles.
-             */
-            Set<SelectionKey> keys = selector.selectedKeys();
-            Iterator<SelectionKey> iterator = keys.iterator();
-            //遍历并处理就绪的事件
-            while (iterator.hasNext()) {
-                SelectionKey key = iterator.next();
-                if (!key.isValid()) {
-                    iterator.remove();
-                    continue;
+            if (selector.select(100) > 0) {
+                /* 代表发生在已注册的处理器上的事件集合
+                 * Represents the events that have occurred on registered handles.
+                 */
+                Set<SelectionKey> keys = selector.selectedKeys();
+                Iterator<SelectionKey> iterator = keys.iterator();
+                //遍历并处理就绪的事件
+                while (iterator.hasNext()) {
+                    SelectionKey key = iterator.next();
+                    if (!key.isValid()) {
+                        iterator.remove();
+                        continue;
+                    }
+                    processKey(key);
                 }
-                processKey(key);
+                keys.clear();
             }
-            keys.clear();
         }
     }
 
@@ -201,7 +246,7 @@ public class NioReactor {
     private void onChannelReadable(SelectionKey key) {
         try {
             /* reads the incoming data in context of reactor main loop. Can this be improved?
-             * 在主循环中读取到来的数据，可否改进？
+             * 最初在主循环中读取到来的数据，可否改进？
              *  干脆将读取的工作也一起给Handler提交到线程池处理？
              *  更进一步，可以将连接就绪事件和其他事件隔离开来，分为主从Reactor。
              *  主reactor线程只关注连接就绪事件，而将通过连接就绪获取到的客户端通道（SocketChannel）注册到从Reactor上，由从Reactor处理客户端通道的所有后续操作：
@@ -230,7 +275,7 @@ public class NioReactor {
 
     /**
      * 客户端连接到来时触发连接（通道）可用事件
-     * 只有TCP会触发，UDP不会触发，是因为UDP不需要维持连接？
+     * 只有TCP会触发，UDP不会触发，因为UDP无连接属性，所以UDP的所有事件只能由mainReactor处理
      */
     private void onChannelAcceptable(SelectionKey key) throws IOException {
         //拿到key关联的channel，acceptable事件中这个channel应该是ServerSocketChannel
@@ -239,10 +284,25 @@ public class NioReactor {
         SocketChannel socketChannel = serverSocketChannel.accept();
         //设置为非阻塞
         socketChannel.configureBlocking(false);
-        //将SocketChannel也注册到selector上，并表明感兴趣的事件为读就绪
-        SelectionKey readKey = socketChannel.register(selector, SelectionKey.OP_READ);
+        //将SocketChannel注册到subReactor上，并表明感兴趣的事件为读就绪
+        Selector subSelector = nextSubSelector();
+        //selector.select()方法会锁住publicKeys，而socketChannel.register()也需要锁住publicKeys，
+        //所以对于一个正阻塞在select上的selector而言，调用register方法会导致死锁，需要先调用一次wakeup以释放锁
+        //疑问：这样不能确保解决死锁问题吧？是否可以将select()改为select(long times)来解决？对性能影响如何？
+        //subSelector.wakeup();
+        SelectionKey readKey = socketChannel.register(subSelector, SelectionKey.OP_READ);
         //绑定当前数据到readKey
         readKey.attach(key.attachment());
+    }
+
+    //获取下一个subReactor
+    private Selector nextSubSelector() {
+        int curIdx = NEXT_INDEX.getAndIncrement();
+        if (curIdx >= SUB_REACTOR_NUM) {
+            NEXT_INDEX.set(0);
+            curIdx = 0;
+        }
+        return subReactors[(curIdx % SUB_REACTOR_NUM)].selector;
     }
 
     /**

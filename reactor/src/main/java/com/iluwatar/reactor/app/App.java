@@ -110,30 +110,39 @@ public class App {
    */
   public static void main(String[] args) throws IOException {
     //创建自定义ThreadPoolDispatcher用于分发事件
-    new App(new ThreadPoolDispatcher(2)).start();
+    new App(new ThreadPoolDispatcher(4)).start();
   }
 
   /**
    * Starts the NIO reactor.
    * 流程：
-   *  打开selector（一个）
+   *  打开mainSelector（一个），同时初始化subReactor（多个）
    *  打开ServerSocketChannel（一个或多个，绑定特定端口和handler）
-   *  将所有ServerSocketChannel注册到selector并表明关注的事件为连接就绪
-   *  通过线程池启动eventLoop，selector开始处理已注册的channel中到来的事件
+   *  将所有ServerSocketChannel注册到mainSelector并表明关注的事件为连接就绪
+   *  通过线程池启动eventLoop，mainSelector开始处理已注册的channel中到来的事件，并将连接就绪的通道注册到subReactor
+   *  subReactor处理后续的读写就绪事件和事件分发
+   *
+   *  注意：mainSelector和subSelector都不监听具体的端口，他们只是提供了底层对epoll的封装以支持非阻塞的reactor模式
+   *  正式监听端口获取连接的是ServerSocketChannel
+   *  正式代表具体网络连接的是SocketChannel
+   *  所以，不止subReactor可以有多个，mainSelector也可以有多个，甚至可以让他们共用一个线程池，唯一的区别只是注册到其中的Channel不同
+   *  同时注册到一个selector的channel既可以是ServerSocketChannel也可以是SocketChannel
+   *
    * @throws IOException if any channel fails to bind.
    */
   public void start() throws IOException {
-    /* 创建reactor对象：
+    /* 创建mainReactor：
+     *  打开一个选择器(selector)用于后续的服务端通道注册和事件监听
+     * 创建的同时会初始化subReactors:
      *  设置事件分发器
      *  打开一个选择器(selector)用于后续的服务端通道注册和事件监听
      * dispatcher：
      *  用于在selector接收到事件后将事件派发到指定的handler(handler可以在channel初始化的时候绑定)
      *  可以自定义对不同类型事件的处理方式
-     *
      * 应用程序可以自定义事件分发机制
      * The application can customize its event dispatching mechanism.
      */
-    reactor = new NioReactor(dispatcher);
+    reactor = new NioReactor(dispatcher, true);
 
     /* 代表分发器在对应的事件发生时可调用的应用程序特定业务逻辑。
      * 在这个例子里，这个事件是读事件
@@ -145,6 +154,7 @@ public class App {
     /* 将应用程序绑定到多个通道上，使用同一个日志处理器处理到来的日志请求
      * Our application binds to multiple channels and uses same logging handler to handle incoming
      * log requests.
+     * 启动mainReactor
      */
     reactor
         //打开多个ServerSocketChannel（指定port和handler）并注册到selector上
@@ -152,7 +162,7 @@ public class App {
         .registerChannel(tcpChannel(6666, loggingHandler))
         .registerChannel(tcpChannel(6667, loggingHandler))
         .registerChannel(udpChannel(6668, loggingHandler))
-        //启动reactor主程序，交由线程池处理，主线程到此结束，后续看eventLoop的实现
+        //启动mainReactor，交由线程池处理
         .start();
   }
 

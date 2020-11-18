@@ -129,6 +129,7 @@ public class AppClient {
 
     private void sendLogRequests(PrintWriter writer, InputStream inputStream) throws IOException {
       for (int i = 0; i < 4; i++) {
+        LOGGER.info(clientName + " - Log request: " + i);
         writer.println(clientName + " - Log request: " + i);
         writer.flush();
 
@@ -169,6 +170,7 @@ public class AppClient {
     public void run() {
       try (DatagramSocket socket = new DatagramSocket()) {
         for (int i = 0; i < 4; i++) {
+          LOGGER.info(clientName + " - Log request: " + i);
 
           String message = clientName + " - Log request: " + i;
           byte[] bytes = message.getBytes();
