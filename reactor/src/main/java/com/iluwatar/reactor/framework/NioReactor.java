@@ -67,7 +67,7 @@ public class NioReactor {
     //subReactor相关属性
     public NioReactor[] subReactors;
     private static final AtomicInteger NEXT_INDEX = new AtomicInteger(0);
-    private static final int SUB_REACTOR_NUM = 1;
+    private static final int SUB_REACTOR_NUM = 3;
 
     /**
      * SelectionKey和Selector操作的所有变更工作都在reactor主event loop的环境中完成
@@ -201,6 +201,8 @@ public class NioReactor {
         while (!Thread.interrupted()) {
             // honor any pending commands first 首先执行预操作集中新增的指令（封装为Runnable）
             // 这个必须在select之前执行，否则无法更改channel关注的事件
+            // 对于mainSelector来说，一直关心连接就绪
+            // 对于subSelector来说，初始关注读就绪，读完需要响应时关注写就绪，写完再切换到读就绪
             processPendingCommands();
             /*
              * 同步事件多路复用发生在这里，这是一个阻塞调用，只有当任何注册到这里的通道上有非阻塞操作产生时才会返回
