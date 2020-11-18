@@ -66,10 +66,11 @@ public class AppClient {
    */
   public void start() throws IOException {
     LOGGER.info("Starting logging clients");
-    service.execute(new TcpLoggingClient("Client 1", 6666));
-    service.execute(new TcpLoggingClient("Client 2", 6667));
-    service.execute(new UdpLoggingClient("Client 3", 6668));
-    service.execute(new UdpLoggingClient("Client 4", 6668));
+    service.execute(new TcpLoggingClient("TCP1", 6666));
+    service.execute(new TcpLoggingClient("TCP2", 6667));
+    service.execute(new TcpLoggingClient("TCP3", 6667));
+    service.execute(new UdpLoggingClient("UDP1", 6668));
+    service.execute(new UdpLoggingClient("UDP2", 6668));
   }
 
   /**
@@ -128,9 +129,9 @@ public class AppClient {
     }
 
     private void sendLogRequests(PrintWriter writer, InputStream inputStream) throws IOException {
-      for (int i = 0; i < 4; i++) {
-        LOGGER.info(clientName + " - Log request: " + i);
-        writer.println(clientName + " - Log request: " + i);
+      for (int i = 1; i < 5; i++) {
+        LOGGER.info(clientName + " request: " + i);
+        writer.println(clientName + " request: " + i);
         writer.flush();
 
         byte[] data = new byte[1024];
@@ -169,10 +170,10 @@ public class AppClient {
     @Override
     public void run() {
       try (DatagramSocket socket = new DatagramSocket()) {
-        for (int i = 0; i < 4; i++) {
-          LOGGER.info(clientName + " - Log request: " + i);
+        for (int i = 1; i < 5; i++) {
+          LOGGER.info(clientName + " request: " + i);
 
-          String message = clientName + " - Log request: " + i;
+          String message = clientName + " request: " + i;
           byte[] bytes = message.getBytes();
           DatagramPacket request = new DatagramPacket(bytes, bytes.length, remoteAddress);
 

@@ -59,13 +59,15 @@ import org.slf4j.LoggerFactory;
 public class NioReactor {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(NioReactor.class);
-    private static final AtomicInteger NEXT_INDEX = new AtomicInteger(0);
-    private static final int SUB_REACTOR_NUM = 3;
 
     private final boolean isMainReactor;
     private final Dispatcher dispatcher;
     public final Selector selector;
-    public final NioReactor[] subReactors = new NioReactor[SUB_REACTOR_NUM];
+
+    //subReactor相关属性
+    public NioReactor[] subReactors;
+    private static final AtomicInteger NEXT_INDEX = new AtomicInteger(0);
+    private static final int SUB_REACTOR_NUM = 3;
 
     /**
      * SelectionKey和Selector操作的所有变更工作都在reactor主event loop的环境中完成
@@ -76,7 +78,15 @@ public class NioReactor {
      * the command and executes it in next iteration.
      */
     private final Queue<Runnable> pendingCommands = new ConcurrentLinkedQueue<>();
-    private final ExecutorService mainService = Executors.newSingleThreadExecutor();
+
+    /**
+     * ThreadPool for mainReactor
+     */
+    private ExecutorService mainService;
+
+    /**
+     * ThreadPool for subReactors
+     */
     private ExecutorService subService;
 
     /**
@@ -87,16 +97,18 @@ public class NioReactor {
      * @throws IOException if any I/O error occurs.
      */
     public NioReactor(Dispatcher dispatcher, boolean isMainReactor) throws IOException {
-        //开启selector mainReactor/subReactor都一样要开启
+        //mainReactor/subReactor共同的操作：开启selector
         this.selector = Selector.open();
         this.isMainReactor = isMainReactor;
-        //如果是sub：设置任务分发器（由App传入，本例具体为线程池实现）
+        //设置任务分发器
         this.dispatcher = dispatcher;
         if (isMainReactor) {
-            //如果是main：初始化对应的subReactor并初始化连接池
+            //如果是mainReactor：初始化subReactors并初始化线程池
+            subReactors = new NioReactor[SUB_REACTOR_NUM];
             for (int i = 0; i < subReactors.length; i++) {
                 subReactors[i] = new NioReactor(dispatcher, false);
             }
+            mainService = Executors.newSingleThreadExecutor();
             subService = Executors.newFixedThreadPool(3);
         }
     }
@@ -285,13 +297,12 @@ public class NioReactor {
         //设置为非阻塞
         socketChannel.configureBlocking(false);
         //将SocketChannel注册到subReactor上，并表明感兴趣的事件为读就绪
-        Selector subSelector = nextSubSelector();
         //selector.select()方法会锁住publicKeys，而socketChannel.register()也需要锁住publicKeys，
         //所以对于一个正阻塞在select上的selector而言，调用register方法会导致死锁，需要先调用一次wakeup以释放锁
         //疑问：这样不能确保解决死锁问题吧？是否可以将select()改为select(long times)来解决？对性能影响如何？
         //subSelector.wakeup();
-        SelectionKey readKey = socketChannel.register(subSelector, SelectionKey.OP_READ);
-        //绑定当前数据到readKey
+        SelectionKey readKey = socketChannel.register(nextSubSelector(), SelectionKey.OP_READ);
+        //绑定数据到readKey 对于acceptable事件，key.attachment()获取到的是ServerSocketChannel注册时绑定的ServerSocketChannel对象
         readKey.attach(key.attachment());
     }
 
@@ -325,7 +336,7 @@ public class NioReactor {
     /**
      * A command that changes the interested operations of the key provided.
      */
-    class ChangeKeyOpsCommand implements Runnable {
+    static class ChangeKeyOpsCommand implements Runnable {
         private final SelectionKey key;
         private final int interestedOps;
 
