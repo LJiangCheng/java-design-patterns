@@ -170,6 +170,7 @@ public abstract class AbstractNioChannel {
       }
     }
     pendingWrites.add(data);
+    //读完数据之后需要响应客户端，通过SelectionKey将channel关注的事件改为写就绪
     reactor.changeOps(key, SelectionKey.OP_WRITE);
   }
 }

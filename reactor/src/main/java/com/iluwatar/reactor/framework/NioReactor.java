@@ -67,7 +67,7 @@ public class NioReactor {
     //subReactor相关属性
     public NioReactor[] subReactors;
     private static final AtomicInteger NEXT_INDEX = new AtomicInteger(0);
-    private static final int SUB_REACTOR_NUM = 3;
+    private static final int SUB_REACTOR_NUM = 1;
 
     /**
      * SelectionKey和Selector操作的所有变更工作都在reactor主event loop的环境中完成
@@ -199,6 +199,9 @@ public class NioReactor {
     public void eventLoop() throws IOException {
         // honor interrupt request 响应中断
         while (!Thread.interrupted()) {
+            // honor any pending commands first 首先执行预操作集中新增的指令（封装为Runnable）
+            // 这个必须在select之前执行，否则无法更改channel关注的事件
+            processPendingCommands();
             /*
              * 同步事件多路复用发生在这里，这是一个阻塞调用，只有当任何注册到这里的通道上有非阻塞操作产生时才会返回
              * Synchronous event de-multiplexing happens here, this is blocking call which returns when it
@@ -206,8 +209,6 @@ public class NioReactor {
              * 使用带timeout的形式可以防止通道注册时死锁
              */
             if (selector.select(10) > 0) {
-                // honor any pending commands first 首先执行预操作集中新增的指令（封装为Runnable）
-                processPendingCommands();
                 /* 代表发生在已注册的处理器上的事件集合
                  * Represents the events that have occurred on registered handles.
                  */
@@ -265,6 +266,9 @@ public class NioReactor {
              *      readable事件：读数据 -> 数据分发到Handler处理
              *      writable事件：写数据
              *  从Reactor可以独立使用一个线程池或者和主Reactor共用一个线程池
+             *
+             * ((AbstractNioChannel) key.attachment()).read(key)实际还是从key.channel()中读取数据，
+             * 只是在AbstractNioChannel实现了读写的一系列方法，需要将AbstractNioChannel实例关联到每一个事件(即)
              */
             Object readObject = ((AbstractNioChannel) key.attachment()).read(key);
             //将已读取到的数据分发给业务层处理(Handler + ThreadPool)
@@ -302,7 +306,10 @@ public class NioReactor {
         //疑问：这样不能确保解决死锁问题吧？是否可以将select()改为select(long times)来解决？对性能影响如何？
         //subSelector.wakeup();
         SelectionKey readKey = socketChannel.register(nextSubSelector(), SelectionKey.OP_READ);
-        //绑定数据到readKey 对于acceptable事件，key.attachment()获取到的是ServerSocketChannel注册时绑定的ServerSocketChannel对象
+        /* 绑定ServerSocketChannel到readKey
+         * 对于acceptable事件，key.attachment()获取到的是ServerSocketChannel注册时绑定的ServerSocketChannel对象
+         * 之所以这么做是因为read方法实现在ServerSocketChannel中，而实际上的数据交互操作还是通过key.channel()获取通道来操作的
+         */
         readKey.attach(key.attachment());
     }
 

@@ -131,7 +131,7 @@ public class AppClient {
     private void sendLogRequests(PrintWriter writer, InputStream inputStream) throws IOException {
       for (int i = 1; i < 5; i++) {
         LOGGER.info(clientName + " request: " + i);
-        writer.println(clientName + " request: " + i);
+        writer.print(clientName + " request: " + i);
         writer.flush();
 
         byte[] data = new byte[1024];
