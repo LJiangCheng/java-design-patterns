@@ -326,11 +326,16 @@ public class NioReactor {
     }
 
     /**
+     * 通过预操作方式更改channel的行为，会在未来的某个时候改变channel关注的事件类型
      * Queues the change of operations request of a channel, which will change the interested
      * operations of the channel sometime in future.
-     *
+     * 这是一个非阻塞方法，而且并不保证方法返回时关注的事件类型已经改变
      * <p>This is a non-blocking method and does not guarantee that the operations have changed when
      * this method returns.
+     *
+     * 因为不提供成功保证，在主从分离的时候出现过一些问题，见eventLoop方法
+     * 预操作某些时候是一种实用的思路，而且跟netty中几乎所有操作都是异步操作且在返回时不提供成功保证的特性一致，但是具体到本方法
+     * 修改关注事件类型的操作，为何不直接用key.interestOps(interestedOps)来实现以降低程序复杂性呢？
      *
      * @param key           the key for which operations have to be changed.
      * @param interestedOps the new interest operations.
