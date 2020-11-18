@@ -63,7 +63,7 @@ public class NioReactor {
     private static final int SUB_REACTOR_NUM = 3;
 
     private final boolean isMainReactor;
-    private Dispatcher dispatcher;
+    private final Dispatcher dispatcher;
     public final Selector selector;
     public final NioReactor[] subReactors = new NioReactor[SUB_REACTOR_NUM];
 
@@ -108,7 +108,7 @@ public class NioReactor {
     public void start() {
         if (!isMainReactor) {
             //不允许非mainReactor调用start方法
-            throw new RuntimeException("Not main reactor is not allow to start!");
+            throw new RuntimeException("Non-main reactor is not allow to start!");
         }
         mainService.execute(() -> {
             try {
@@ -139,7 +139,7 @@ public class NioReactor {
     public void stop() throws InterruptedException, IOException {
         if (!isMainReactor) {
             //不允许非主reactor调用stop方法
-            throw new RuntimeException("Not main reactor is not allow to stop!");
+            throw new RuntimeException("Non-main reactor is not allow to stop!");
         }
         mainService.shutdownNow();
         selector.wakeup();
@@ -187,15 +187,15 @@ public class NioReactor {
     public void eventLoop() throws IOException {
         // honor interrupt request 响应中断
         while (!Thread.interrupted()) {
-            // honor any pending commands first 首先执行预操作集中新增的指令（封装为Runnable）
-            processPendingCommands();
             /*
              * 同步事件多路复用发生在这里，这是一个阻塞调用，只有当任何注册到这里的通道上有非阻塞操作产生时才会返回
              * Synchronous event de-multiplexing happens here, this is blocking call which returns when it
              * is possible to initiate non-blocking operation on any of the registered channels.
              * 使用带timeout的形式可以防止通道注册时死锁
              */
-            if (selector.select(100) > 0) {
+            if (selector.select(10) > 0) {
+                // honor any pending commands first 首先执行预操作集中新增的指令（封装为Runnable）
+                processPendingCommands();
                 /* 代表发生在已注册的处理器上的事件集合
                  * Represents the events that have occurred on registered handles.
                  */
