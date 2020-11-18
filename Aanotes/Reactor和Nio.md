@@ -89,6 +89,11 @@ Reactor With NIO
        一个长时间的数据读写，还是会影响这个Reactor中其他Channel的相应时间，比如在大文件传输时，IO操作就会影响其他Client的相应时间，因而  
        对这种操作，使用传统的Thread-Per-Connection或许是一个更好的选择，或者此时使用Proactor模式。
 
+5. 项目实例
+   * reactor模块
+     > 从github上获取，对其进行了主从分离改造和改造中的BUG修复，并做了大量笔记
+     * App
+       > 从App看起，观察server端的整个启动过程
 
 ## Netty
 
