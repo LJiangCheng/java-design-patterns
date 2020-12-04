@@ -24,4 +24,5 @@ We need a mechanism in place which can handle these kinds of situations. We have
 
 ## Credits
 
-* [https://www.grahamlea.com/2016/08/distributed-transactions-microservices-icebergs/]
+* https://www.grahamlea.com/2016/08/distributed-transactions-microservices-icebergs/
+

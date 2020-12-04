@@ -9,7 +9,7 @@ tags:
 ---
 
 ## Also known as
-
+命令、动作、事务模式
 Action, Transaction
 
 ## Intent
