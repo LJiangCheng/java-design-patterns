@@ -39,6 +39,10 @@ Taking our sentence example from above. Here we have the base class `LetterCompo
 different printable types `Letter`, `Word` and `Sentence`. 
 
 ```java
+/**
+* 抽象类
+* 句子、单词、字母的统一基类，能够以树状结构统一多个层次的行为，并对外提供统一的API
+*/
 public abstract class LetterComposite {
 
   private final List<LetterComposite> children = new ArrayList<>();
@@ -64,6 +68,9 @@ public abstract class LetterComposite {
   }
 }
 
+/**
+* 字母
+*/
 public class Letter extends LetterComposite {
 
   private final char character;
@@ -78,6 +85,9 @@ public class Letter extends LetterComposite {
   }
 }
 
+/**
+* 单词
+*/
 public class Word extends LetterComposite {
 
   public Word(List<Letter> letters) {
@@ -96,6 +106,9 @@ public class Word extends LetterComposite {
   }
 }
 
+/**
+* 句子
+*/
 public class Sentence extends LetterComposite {
 
   public Sentence(List<Word> words) {
