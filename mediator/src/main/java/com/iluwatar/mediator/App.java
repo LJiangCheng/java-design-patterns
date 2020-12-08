@@ -53,7 +53,8 @@ public class App {
    */
   public static void main(String[] args) {
 
-    // create party and members
+    //create party and members
+    //party就是中介者
     Party party = new PartyImpl();
     var hobbit = new Hobbit();
     var wizard = new Wizard();
