@@ -11,6 +11,7 @@ tags:
 
 ## Intent
 
+通过共享有效地支持大量细粒度对象创建
 Use sharing to support large numbers of fine-grained objects efficiently.
 
 ## Explanation
@@ -23,12 +24,13 @@ Real world example
 
 In plain words
 
+通过尽可能地共享相似的对象以减少内存或CPU占用
 > It is used to minimize memory usage or computational expenses by sharing as much as possible with 
 > similar objects.
 
 Wikipedia says
 
-> In computer programming, flyweight is a software design pattern. A flyweight is an object that 
+> In computer programming, flyweight is a software design pattern. A flyweight is an object that
 > minimizes memory use by sharing as much data as possible with other similar objects; it is a way 
 > to use objects in large numbers when a simple repeated representation would use an unacceptable 
 > amount of memory.
