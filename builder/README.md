@@ -24,12 +24,14 @@ Real world example
 
 In plain words
 
+允许创建不同风格的对象同时避免构造函数污染。当对象可以拥有几种不同的风格时很有用。或者当创建一个对象需要许多步骤时。
 > Allows you to create different flavors of an object while avoiding constructor pollution. Useful 
 > when there could be several flavors of an object. Or when there are a lot of steps involved in 
 > creation of an object.
 
 Wikipedia says
 
+构造型设计模式，目的是提供可伸缩的构造方法反模式问题的解决方案。
 > The builder pattern is an object creation software design pattern with the intentions of finding 
 > a solution to the telescoping constructor anti-pattern.
 
@@ -40,7 +42,9 @@ or the other, we have all seen a constructor like below:
 public Hero(Profession profession, String name, HairType hairType, HairColor hairColor, Armor armor, Weapon weapon) {
 }
 ```
-
+如上，构造器的参数会快速失控，而且也会导致难以理解的参数排列。  
+此外，如果想增加更多选项，将来的构造函数会更加臃肿。
+这就是可伸缩的构造方法反模式。
 As you can see the number of constructor parameters can quickly get out of hand, and it may become 
 difficult to understand the arrangement of parameters. Plus this parameter list could keep on 
 growing if you would want to add more options in the future. This is called telescoping constructor 
@@ -48,6 +52,7 @@ anti-pattern.
 
 **Programmatic Example**
 
+明智的选择是使用建造者模式
 The sane alternative is to use the Builder pattern. First of all we have our hero that we want to 
 create:
 
