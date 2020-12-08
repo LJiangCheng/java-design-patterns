@@ -23,6 +23,7 @@
 
 package com.iluwatar.flyweight;
 
+import java.util.Arrays;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,17 +43,17 @@ public class AlchemistShop {
    */
   public AlchemistShop() {
     var factory = new PotionFactory();
-    topShelf = List.of(
-        factory.createPotion(PotionType.INVISIBILITY),
-        factory.createPotion(PotionType.INVISIBILITY),
-        factory.createPotion(PotionType.STRENGTH),
-        factory.createPotion(PotionType.HEALING),
-        factory.createPotion(PotionType.INVISIBILITY),
-        factory.createPotion(PotionType.STRENGTH),
-        factory.createPotion(PotionType.HEALING),
-        factory.createPotion(PotionType.HEALING)
+    topShelf = Arrays.asList(
+            factory.createPotion(PotionType.INVISIBILITY),
+            factory.createPotion(PotionType.INVISIBILITY),
+            factory.createPotion(PotionType.STRENGTH),
+            factory.createPotion(PotionType.HEALING),
+            factory.createPotion(PotionType.INVISIBILITY),
+            factory.createPotion(PotionType.STRENGTH),
+            factory.createPotion(PotionType.HEALING),
+            factory.createPotion(PotionType.HEALING)
     );
-    bottomShelf = List.of(
+    bottomShelf = Arrays.asList(
         factory.createPotion(PotionType.POISON),
         factory.createPotion(PotionType.POISON),
         factory.createPotion(PotionType.POISON),
@@ -67,7 +68,7 @@ public class AlchemistShop {
    * @return The top shelf potions
    */
   public final List<Potion> getTopShelf() {
-    return List.copyOf(this.topShelf);
+    return this.topShelf;
   }
 
   /**
@@ -76,7 +77,7 @@ public class AlchemistShop {
    * @return The bottom shelf potions
    */
   public final List<Potion> getBottomShelf() {
-    return List.copyOf(this.bottomShelf);
+    return this.bottomShelf;
   }
 
   /**
