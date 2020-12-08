@@ -11,6 +11,7 @@ tags:
 
 ## Intent
 
+为一个子系统的接口集提供一个统一的访问入口。外观模式定义一个高层次接口使得子系统更易于使用。
 Provide a unified interface to a set of interfaces in a subsystem. Facade defines a higher-level 
 interface that makes the subsystem easier to use.
 
@@ -18,6 +19,8 @@ interface that makes the subsystem easier to use.
 
 Real world example
 
+金矿如何运作？"矿工下地然后挖出金子"！你这么认为是因为你使用了金矿对外提供的一个简单接口，掩盖了其内部复杂的运作逻辑。
+这种复杂系统的简单接口抽象就是外观模式。
 > How does a goldmine work? "Well, the miners go down there and dig gold!" you say. That is what you 
 > believe because you are using a simple interface that goldmine provides on the outside, internally 
 > it has to do a lot of stuff to make it happen. This simple interface to the complex subsystem is a 
@@ -29,6 +32,7 @@ In plain words
 
 Wikipedia says
 
+外观模式就是为大体量代码提供简单访问接口的对象，如一个类库
 > A facade is an object that provides a simplified interface to a larger body of code, such as a 
 > class library.
 
