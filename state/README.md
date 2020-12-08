@@ -14,6 +14,7 @@ Objects for States
 
 ## Intent
 
+允许对象根据其内部状态变化改变行为。表面看上去就像是改变了对象所属的类
 Allow an object to alter its behavior when its internal state changes. The object will appear to 
 change its class.
 
@@ -27,10 +28,13 @@ Real world example
 
 In plain words
 
+状态模式允许对象改变自身行为
 > State pattern allows an object to change its behavior. 
 
 Wikipedia says
 
+状态模式允许对象在内部状态变化时改变自身行为。状态模式与有限状态机的概念密切相关。
+状态模式也可以被理解为策略模式，即可以通过调用接口内定义的不同方法来选择策略。
 > The state pattern is a behavioral software design pattern that allows an object to alter its 
 > behavior when its internal state changes. This pattern is close to the concept of finite-state 
 > machines. The state pattern can be interpreted as a strategy pattern, which is able to switch a 
