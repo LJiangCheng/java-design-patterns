@@ -16,6 +16,7 @@ copying this prototype.
 
 ## Explanation
 
+首先要注意：原型模式并不是用于获得更好的性能，它只是用于从原型对象创建新对象
 First it should be noted that Prototype pattern is not used to gain performance benefits. It's only 
 used for creating new objects from prototype instance.
 
@@ -26,14 +27,17 @@ Real world example
 
 In plain words
 
+基于已存在的对象，通过克隆创建新对象
 > Create object based on an existing object through cloning.
 
 Wikipedia says
 
+当要创建的对象取决于一个原型对象实例，该实例被克隆以产生新的对象。
 > The prototype pattern is a creational design pattern in software development. It is used when the 
 > type of objects to create is determined by a prototypical instance, which is cloned to produce new 
 > objects.
 
+简而言之，这允许你通过复制已存在的对象来创建新的对象并根据需要修改它，而不是从头经过一系列复杂的步骤和设置去产生一个新对象。
 In short, it allows you to create a copy of an existing object and modify it to your needs, instead 
 of going through the trouble of creating an object from scratch and setting it up.
 
