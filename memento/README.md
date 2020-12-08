@@ -14,6 +14,7 @@ Token
 
 ## Intent
 
+在不违反封装的情况下，捕获并外部化对象的内部状态以便之后可以将其恢复到这个状态
 Without violating encapsulation, capture and externalize an object's internal state so that the 
 object can be restored to this state later.
 
@@ -31,6 +32,7 @@ In plain words
 
 Wikipedia says
 
+主要：提供对象的重置功能
 > The memento pattern is a software design pattern that provides the ability to restore an object to 
 > its previous state (undo via rollback).
 
