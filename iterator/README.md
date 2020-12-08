@@ -13,6 +13,8 @@ tags:
 Cursor
 
 ## Intent
+
+提供按顺序访问集合的方法，同时不暴露集合的底层实现
 Provide a way to access the elements of an aggregate object sequentially without exposing its 
 underlying representation.
 
