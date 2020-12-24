@@ -72,7 +72,7 @@ Reactor With NIO
 
 2. NIO和Reactor
    > 在Java的NIO中，对Reactor模式有无缝的支持，即通过Selector类封装了操作系统提供的Synchronous Event Demultiplexer(同步事件多路复用分发)功能。
-   > > selector和reactor的关系：selector支持和实现了reactor模式，一个运行中的selector选择器就是所谓的reactor线程
+   > > selector和reactor的关系：selector是由java实现的reactor模式的关键组件，一个运行中的selector选择器就是所谓的reactor线程
    > > PS:这个Doug Lea在Scalable IO In Java中有非常深入的解释，同时这篇文章里也描述了主从分离的Reactor模式，这同样是Netty使用的实现形式
 
 3. 主从分离
